@@ -1,5 +1,5 @@
 package parser
 
-class ASTNode {
+interface ASTNode {
     
 }

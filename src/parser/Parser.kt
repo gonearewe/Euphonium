@@ -1,4 +1,5 @@
 package parser
 
-class Parser {
+class Parser(l: lexer.Lexer) {
+
 }
