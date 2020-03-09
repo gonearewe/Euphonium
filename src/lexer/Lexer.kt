@@ -5,27 +5,30 @@ import java.util.regex.Pattern
 
 class Lexer private constructor(private val source: String) {
     private val tokens = ArrayList<Token>()
+    private var position = -1
+    val hasNext
+        get() = position + 1 != tokens.size
 
     private val matchers = arrayListOf(
             Pair<Matcher, String>(Pattern
-                    .compile("^\\d+")
+                    .compile("\\d+")
                     .matcher(source), "number"),
 
             Pair<Matcher, String>(Pattern
-                    .compile("^(let|val|var|const|if|else|return|struct|for|when|true|false)")
+                    .compile("(let|val|var|const|if|else|return|struct|for|when|while|main|fun)")
                     .matcher(source), "keyword"),
 
             Pair<Matcher, String>(Pattern
-                    .compile("^([(){}\\[\\]])")
+                    .compile("[(){}\\[\\],;]")
                     .matcher(source), "separator"),
 
             Pair<Matcher, String>(Pattern
-                    .compile("^(==|=>|=|\\+\\+|\\+|--|->|-|\\*|/|\\|#)")
+                    .compile("(==|=>|=|\\+\\+|\\+|--|->|-|\\*|/|%|!=|!|>=|<=|>|<|\\|\\||&&)")
                     .matcher(source), "operator"),
 
             Pair<Matcher, String>(Pattern
-                    .compile("^(a-zA-Z)[\\w_]*")
-                    .matcher(source), "separator"),
+                    .compile("[a-zA-Z]\\w*")
+                    .matcher(source), "identifier")
     )
 
     companion object {
@@ -37,10 +40,13 @@ class Lexer private constructor(private val source: String) {
                     start++
                     continue
                 }
-
+//            val f=lexer.matchers[4].first.find(7)
                 for ((matcher, type) in lexer.matchers) {
                     if (matcher.find(start)) {
-                        val end = matcher.end() + 1
+                        if (matcher.start() != start) {
+                            continue
+                        }
+                        val end = matcher.end()
                         lexer.tokens.add(Token(source.substring(start, end), type))
                         start = end
                         break
@@ -50,8 +56,22 @@ class Lexer private constructor(private val source: String) {
 
             return lexer
         }
-
     }
+
+    fun nextToken(): Token {
+        position++
+        return tokens[position]
+    }
+
+    fun lookAhead(step: Int = 1): Token? {
+        if (!exist(position + step)) {
+            return null
+        }
+
+        return tokens[position + step]
+    }
+
+    private fun exist(position: Int) = position < tokens.size
 
     override fun toString(): String {
         return buildString(tokens.size) {
@@ -68,5 +88,23 @@ class Lexer private constructor(private val source: String) {
 
 
 fun main() {
-    println(Lexer.tokenize("let x=67; val y=x; when(x==y){ return true;}"))
+    val l = Lexer.tokenize("""
+        |let a; 
+        |a=7;
+        |var b =a ;
+        |if(a == b){
+        |   let fn = fun(x ,y ){
+        |       var x=10;
+        |       while(x>=0){
+        |           print(x);
+        |           x--;
+        |       }
+        |       
+        |       return x;
+        |   }
+        |}
+    """.trimMargin())
+    while (l.hasNext) {
+        println(l.nextToken())
+    }
 }
