@@ -1,0 +1,5 @@
+package parser
+
+interface ASTNode {
+    
+}

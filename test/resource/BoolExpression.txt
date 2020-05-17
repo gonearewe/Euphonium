@@ -1,0 +1,27 @@
+# FORMAT:
+# input tokens values separated by one space
+# expected output AST first-order traversal results
+
+true
+true
+
+! false
+! false
+
+true || false
+|| true false
+
+true && ( true || false )
+&& true || true false
+
+false || ! ( true && ! false )
+|| false ! && true ! false
+
+5 > 1 && true
+&& > 5 1 true
+
+( 6 == 8 ) && ! ( ( 21 >= 7 ) || true || false )
+&& == 6 8 ! || || >= 21 7 true false
+
+( 26 - 8 * ( 1 / 1 ) ) != 13 && 66 <= 100 || ( ( 24 < 12 ) )
+|| && != - 26 * 8 / 1 1 13 <= 66 100 < 24 12
