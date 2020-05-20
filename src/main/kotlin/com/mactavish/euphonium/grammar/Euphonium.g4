@@ -9,7 +9,8 @@ expr:   ('-'|'+') expr
     |   expr '||' expr
     |   expr '(' expr (',' expr)* ')'              // call function
     |   'if' '(' expr ')' expr 'else' expr
-    |   '{' (vardecl|(expr NL))* expr NL? '}'
+    |   '{' (vardecl|expr)* expr '}'
+    |   expr ';'
     |   ID
     |   STRING
     |   INT
@@ -18,11 +19,11 @@ expr:   ('-'|'+') expr
 
 // function level declration
 
-vardecl : 'let' ID ':' TYPE '=' expr NL;
+vardecl : 'let' ID ':' TYPE '=' expr ';' ;
 
 // top level declration
 
-typedecl : 'type' TYPENAME '=' TYPE NL ;
+typedecl : 'type' TYPENAME '=' TYPE ';' ;
 
 fundecl : 'fun' ID '(' ID ':' TYPE (',' ID ':' TYPE)* ')' ':' TYPE '=' expr ;
 
@@ -69,6 +70,6 @@ fragment LETTER  : [a-zA-Z] ;
 COMMENT :   '#' .*? '\r'? '\n' -> type(NL) ;
 
 // Match both UNIX and Windows newlines
-NL      :   '\r'? '\n' ;
+NL      :   '\r'? '\n' -> skip ;
 
 WS      :   [ \t]+ -> skip ;
