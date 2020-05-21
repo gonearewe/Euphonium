@@ -5,7 +5,6 @@ import com.mactavish.euphonium.ast.EuphoniumParser
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.ParseTree
-import org.antlr.v4.runtime.tree.ParseTreeWalker
 
 class Parser {
     fun parse(s:String){
@@ -16,6 +15,6 @@ class Parser {
 
         val tree: ParseTree = parser.fundecl()
 
-        ParseTreeWalker().walk(Listener(), tree)
+        Visitor().visit(tree)
     }
 }

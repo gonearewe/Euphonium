@@ -22,7 +22,7 @@ data class VarDeclaration(override val symbol: Symbol, override val expr: Expr):
 }
 
 // FuncDeclaration represents the declaration of toplevel functions.
-data class FuncDeclaration(override val symbol: Symbol, override val expr: Expr):Declaration() {
+data class FuncDeclaration(override val symbol: Symbol, override val expr: Expr,val env: Environment):Declaration() {
     override fun type(env: Environment): Type {
         TODO("Not yet implemented")
     }
@@ -41,7 +41,7 @@ typealias Operator=String
 
 sealed class Value:Expr()
 
-data class IntValue(val i:Int):Value() {
+data class IntValue(val i:Int=0):Value() {
     override fun type(env: Environment): Type {
         TODO("Not yet implemented")
     }
@@ -51,7 +51,7 @@ data class IntValue(val i:Int):Value() {
     }
 }
 
-data class StringValue(val s:String):Value() {
+data class StringValue(val s:String=""):Value() {
     override fun type(env: Environment): Type {
         TODO("Not yet implemented")
     }
@@ -61,7 +61,7 @@ data class StringValue(val s:String):Value() {
     }
 }
 
-data class BoolValue(val b:Boolean):Value() {
+data class BoolValue(val b:Boolean=false):Value() {
     override fun evalIn(env: Environment): Value {
         TODO("Not yet implemented")
     }
@@ -77,7 +77,8 @@ object UnitValue : Value() {
     override fun evalIn(env: Environment): Value =this
 }
 
-data class FuncValue(val parameter:List<Value>,val retType:Type):Value() {
+typealias Param=Pair<Symbol,Value>
+data class FuncExpr(val parameter:List<Param>,val retType:Type,val body:Expr,val env: Environment):Expr() {
     override fun type(env: Environment): Type {
         TODO("Not yet implemented")
     }
@@ -136,6 +137,12 @@ data class VariableExpr(val symbol: Symbol):Expr() {
 //    }
 //}
 //
-//data class BlockExpr(val statements: List<Statement> = mutableListOf()):Expr(){
-//
-//}
+data class BlockExpr(val statements: List<Statement> = mutableListOf()):Expr(){
+    override fun type(env: Environment): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun evalIn(env: Environment): Value {
+        TODO("Not yet implemented")
+    }
+}
