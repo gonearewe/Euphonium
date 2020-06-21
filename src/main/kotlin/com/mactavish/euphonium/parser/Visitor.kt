@@ -48,7 +48,24 @@ class Visitor() : EuphoniumBaseVisitor<Statement>(){
 
     override fun visitExpr(context: EuphoniumParser.ExprContext?): Statement {
         val ctx=context!!
-//        when(ctx.)
+        // block expr
+        if(ctx.children.first().text=="{"&&ctx.children.last().text=="}"){
+            val statements= mutableListOf<Statement>()
+            if(ctx.childCount>=2) { // avoiding empty block body
+                for (i in 1 until ctx.childCount - 1) {
+                    statements.add(visit(ctx.getChild(i))) // collect statements in this block
+                }
+            }
+            return BlockExpr(statements)
+        }
+
+
         return UnitValue
+    }
+
+    override fun visitVardecl(context: EuphoniumParser.VardeclContext?): Statement {
+        val ctx=context!!
+
+        return VarDeclaration(symbol = ctx.ID().text,expr = visit(ctx.expr()) as Expr)
     }
 }
