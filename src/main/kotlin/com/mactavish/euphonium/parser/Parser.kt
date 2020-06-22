@@ -15,6 +15,8 @@ class Parser {
 
         val tree: ParseTree = parser.fundecl()
 
-        Visitor().visit(tree)
+        val x = Visitor()
+        x.visit(tree)
+        print("x")
     }
 }

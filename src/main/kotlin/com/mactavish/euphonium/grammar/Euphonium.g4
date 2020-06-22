@@ -1,12 +1,25 @@
 grammar Euphonium;
 
-expr:   ('-'|'+') expr
-    |   expr ('*'|'/'|'%') expr
-    |   expr ('+'|'-') expr
-    |   expr ('>'|'>='|'<'|'<='|'=='|'!=') expr
-    |   '!' expr
-    |   expr '&&' expr
-    |   expr '||' expr
+//expr:   op = ('-'|'+') expr
+//    |   expr op = ('*'|'/'|'%') expr
+//    |   expr op = ('+'|'-') expr
+//    |   expr op = ('>'|'>='|'<'|'<='|'=='|'!=') expr
+//    |   op = '!' expr
+//    |   expr op = '&&' expr
+//    |   expr op = '||' expr
+//    |   expr '(' expr (',' expr)* ')'              // call function
+//    |   'if' '(' expr ')' expr 'else' expr
+//    |   '{' (vardecl|expr)* expr '}'
+//    |   expr ';'
+//    |   ID
+//    |   STRING
+//    |   INT
+//    |   BOOL
+//    ;
+
+expr:   '(' expr ')'
+    |   expr op = BINARY_OP expr
+    |   op = UNARY_OP expr
     |   expr '(' expr (',' expr)* ')'              // call function
     |   'if' '(' expr ')' expr 'else' expr
     |   '{' (vardecl|expr)* expr '}'
@@ -16,6 +29,14 @@ expr:   ('-'|'+') expr
     |   INT
     |   BOOL
     ;
+
+UNARY_OP :  '!'   ;
+
+BINARY_OP : '+'|'-'
+          | '*'|'/'|'%'
+          | '>'|'>='|'<'|'<='|'=='|'!='
+          | '&&'|'||'
+          ;
 
 // function level declration
 
