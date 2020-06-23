@@ -1,12 +1,26 @@
 grammar Euphonium;
 
-//expr:   op = ('-'|'+') expr
-//    |   expr op = ('*'|'/'|'%') expr
-//    |   expr op = ('+'|'-') expr
-//    |   expr op = ('>'|'>='|'<'|'<='|'=='|'!=') expr
-//    |   op = '!' expr
-//    |   expr op = '&&' expr
-//    |   expr op = '||' expr
+expr:   '(' expr ')'
+    |   op = ('-'|'+') expr
+    |   expr op = ('*'|'/'|'%') expr
+    |   expr op = ('+'|'-') expr
+    |   expr op = ('>'|'>='|'<'|'<='|'=='|'!=') expr
+    |   op = '!' expr
+    |   expr op = '&&' expr
+    |   expr op = '||' expr
+    |   expr '(' expr (',' expr)* ')'              // call function
+    |   'if' '(' expr ')' expr 'else' expr
+    |   '{' (vardecl|exprStatement)* exprStatement '}'
+    |   ID
+    |   STRING
+    |   INT
+    |   BOOL
+    ;
+
+exprStatement : expr ';' ;
+//expr:   '(' expr ')'
+//    |   expr op = BINARY_OP expr
+//    |   op = UNARY_OP expr
 //    |   expr '(' expr (',' expr)* ')'              // call function
 //    |   'if' '(' expr ')' expr 'else' expr
 //    |   '{' (vardecl|expr)* expr '}'
@@ -16,27 +30,14 @@ grammar Euphonium;
 //    |   INT
 //    |   BOOL
 //    ;
-
-expr:   '(' expr ')'
-    |   expr op = BINARY_OP expr
-    |   op = UNARY_OP expr
-    |   expr '(' expr (',' expr)* ')'              // call function
-    |   'if' '(' expr ')' expr 'else' expr
-    |   '{' (vardecl|expr)* expr '}'
-    |   expr ';'
-    |   ID
-    |   STRING
-    |   INT
-    |   BOOL
-    ;
-
-UNARY_OP :  '!'   ;
-
-BINARY_OP : '+'|'-'
-          | '*'|'/'|'%'
-          | '>'|'>='|'<'|'<='|'=='|'!='
-          | '&&'|'||'
-          ;
+//
+//UNARY_OP :  '!'   ;
+//
+//BINARY_OP : '+'|'-'
+//          | '*'|'/'|'%'
+//          | '>'|'>='|'<'|'<='|'=='|'!='
+//          | '&&'|'||'
+//          ;
 
 // function level declration
 
@@ -88,7 +89,7 @@ ID  :   [a-z] (LETTER|DIGIT|'_'|'$')*  ;
 
 fragment LETTER  : [a-zA-Z] ;
 
-COMMENT :   '#' .*? '\r'? '\n' -> type(NL) ;
+COMMENT :   '#' .*? '\r'? '\n' -> skip ;
 
 // Match both UNIX and Windows newlines
 NL      :   '\r'? '\n' -> skip ;

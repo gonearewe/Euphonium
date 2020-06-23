@@ -5,23 +5,20 @@ import com.mactavish.euphonium.ast.EuphoniumParser
 import com.mactavish.euphonium.parser.component.*
 
 class Visitor() : EuphoniumBaseVisitor<Statement>() {
-    val globalEnvironment = Environment.newGlobalEnvironment()
+    private val globalEnvironment = Environment.newGlobalEnvironment()
 
     override fun visitFundecl(context: EuphoniumParser.FundeclContext?): Statement {
         val ctx = context!!
 
         // collect params
-        val params = mutableListOf<Param>()
+        val params = mutableMapOf<Symbol, Type>()
         for (i in 1 until ctx.ID().size) {
             val paramName = ctx.ID(i).toString()
-            val paramType = ctx.TYPE(i).toString()
-            when (paramType) {
-                "Int" -> Param(paramName, IntValue())
-                "Bool" -> Param(paramName, BoolValue())
-                "String" -> Param(paramName, StringValue())
+            when (val paramType = ctx.TYPE(i).toString()) {
+                "Int" -> params[paramName] = IntType
+                "Bool" -> params[paramName] = BoolType
+                "String" -> params[paramName] = StringType
                 else -> throw Exception("unknown type $paramType for $paramName in function ${ctx.text}")
-            }.let {
-                params.add(it)
             }
         }
 
@@ -38,7 +35,7 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
 
         globalEnvironment.define(
                 symbol = ctx.ID(0).toString(),
-                expr = FuncExpr(params, retType, visit(ctx.getChild(ctx.childCount - 1)) as Expr, globalEnvironment)
+                expr = FuncValue(params, retType, visit(ctx.getChild(ctx.childCount - 1)) as Expr, globalEnvironment)
         )
 
         return UnitValue // we don't need the result of this visitor actually
@@ -50,8 +47,8 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         // block expr
         if (ctx.children.first().text == "{" && ctx.children.last().text == "}") {
             val statements = mutableListOf<Statement>()
-            if (ctx.childCount >= 2) { // avoiding empty block body
-                for (i in 1 until ctx.childCount - 1) {
+            if (ctx.childCount >= 2) { // avoiding empty block body, two children mean '{' and '}'
+                for (i in 1 until ctx.childCount - 1) { // list statements
                     statements.add(visit(ctx.getChild(i))) // collect statements in this block
                 }
             }
@@ -65,11 +62,11 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
             return visitChildExpr(0)
         }
 
-        if (ctx.op?.type == EuphoniumParser.UNARY_OP) {
+        if (ctx.op?.text in listOf("-", "+", "!") && ctx.expr().size == 1) {
             return UnaryExpr(ctx.op?.text!!, visitChildExpr(0))
         }
 
-        if (ctx.op?.type == EuphoniumParser.BINARY_OP) {
+        if (ctx.op?.text in listOf("*", "/", "%", "+", "-", ">", ">=", "<", "<=", "==", "!=", "&&", "||") && ctx.expr().size == 2) {
             return BinaryExpr(ctx.op?.text!!, visitChildExpr(0), visitChildExpr(1))
         }
 
@@ -81,7 +78,7 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
             if (ctx.childCount == 3) {
                 return FuncCallExpr(visitChildExpr(0), listOf())
             }
-            return FuncCallExpr(visitChildExpr(0), (1 until ctx.childCount).map { visitChildExpr(it) })
+            return FuncCallExpr(visitChildExpr(0), (1 until ctx.expr().size).map { visitChildExpr(it) })
         }
 
         // ( expr ';' ) is also an expr
@@ -95,6 +92,8 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
                 ?: ctx.BOOL()?.let { BoolValue(it.text!!.toBoolean()) }
                 ?: throw Exception("unknown expression: $ctx")
     }
+
+    override fun visitExprStatement(ctx: EuphoniumParser.ExprStatementContext?): Statement = visitExpr(ctx?.expr())
 
     override fun visitVardecl(context: EuphoniumParser.VardeclContext?): Statement {
         val ctx = context!!
