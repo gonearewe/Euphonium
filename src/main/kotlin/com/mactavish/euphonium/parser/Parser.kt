@@ -2,12 +2,13 @@ package com.mactavish.euphonium.parser
 
 import com.mactavish.euphonium.ast.EuphoniumLexer
 import com.mactavish.euphonium.ast.EuphoniumParser
+import com.mactavish.euphonium.evaler.Evaler
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.ParseTree
 
 class Parser {
-    fun parse(s:String){
+    fun parse(s: String): Evaler {
         val lexer = EuphoniumLexer(CharStreams.fromString(s))
         val tokens = CommonTokenStream(lexer)
         val parser = EuphoniumParser(tokens)
@@ -15,8 +16,8 @@ class Parser {
 
         val tree: ParseTree = parser.fundecl()
 
-        val x = Visitor()
-        x.visit(tree)
-        print("x")
+        val v = Visitor()
+        v.visit(tree)
+        return Evaler(v.globalEnvironment)
     }
 }

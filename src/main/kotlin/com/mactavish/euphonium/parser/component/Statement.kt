@@ -8,25 +8,20 @@ sealed class Statement {
 sealed class Declaration : Statement() {
     abstract val symbol: Symbol
     abstract val expr: Expr
+
     override fun execute(env: Environment): Value {
         env.define(symbol, expr)
         return UnitValue
     }
+
+    override fun type(env: Environment): Type = UnitType
 }
 
 // VarDeclaration represents the declaration of ordinary variables and non-toplevel functions.
-data class VarDeclaration(override val symbol: Symbol, override val expr: Expr) : Declaration() {
-    override fun type(env: Environment): Type {
-        TODO("Not yet implemented")
-    }
-}
+data class VarDeclaration(override val symbol: Symbol, override val expr: Expr) : Declaration()
 
 // FuncDeclaration represents the declaration of toplevel functions.
-data class FuncDeclaration(override val symbol: Symbol, override val expr: Expr, val env: Environment) : Declaration() {
-    override fun type(env: Environment): Type {
-        TODO("Not yet implemented")
-    }
-}
+data class FuncDeclaration(override val symbol: Symbol, override val expr: Expr, val env: Environment) : Declaration()
 
 sealed class Expr : Statement() {
     override fun execute(env: Environment): Value = evalIn(env)

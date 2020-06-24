@@ -3,9 +3,16 @@ package com.mactavish.euphonium.parser
 import com.mactavish.euphonium.ast.EuphoniumBaseVisitor
 import com.mactavish.euphonium.ast.EuphoniumParser
 import com.mactavish.euphonium.parser.component.*
+import org.antlr.v4.runtime.tree.ParseTree
 
 class Visitor() : EuphoniumBaseVisitor<Statement>() {
-    private val globalEnvironment = Environment.newGlobalEnvironment()
+    val globalEnvironment = Environment.newGlobalEnvironment()
+
+    override fun visit(tree: ParseTree?): Statement {
+        synchronized(globalEnvironment) {
+            return super.visit(tree)
+        }
+    }
 
     override fun visitFundecl(context: EuphoniumParser.FundeclContext?): Statement {
         val ctx = context!!
