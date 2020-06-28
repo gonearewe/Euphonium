@@ -1,6 +1,5 @@
 // Generated from E:/MyProjects/Euphonium/src/main/kotlin/com/mactavish/euphonium/grammar\Euphonium.g4 by ANTLR 4.8
 package com.mactavish.euphonium.ast;
-
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**

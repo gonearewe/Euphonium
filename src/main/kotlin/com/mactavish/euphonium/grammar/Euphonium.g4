@@ -11,6 +11,7 @@ expr:   '(' expr ')'
     |   expr '(' expr (',' expr)* ')'              // call function
     |   'if' '(' expr ')' expr 'else' expr
     |   '{' (vardecl|exprStatement)* exprStatement '}'
+    |   '(' ID  (',' ID )* ')' '=>' expr
     |   ID
     |   STRING
     |   INT
@@ -75,7 +76,7 @@ STRING
 fragment
 ESC :   '\\' ([abtnfrv]|'"'|'\'')   ;
 
-TYPE : '(' TYPENAME ')' '=>' '(' TYPENAME ')'
+TYPE : '(' TYPE (',' TYPE)* ')' '=>' '(' TYPE (',' TYPE)* ')'
      | TYPENAME ('|' TYPENAME)+
      | TYPENAME
      ;

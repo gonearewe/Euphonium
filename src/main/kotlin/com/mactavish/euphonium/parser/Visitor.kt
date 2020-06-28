@@ -7,6 +7,7 @@ import org.antlr.v4.runtime.tree.ParseTree
 
 class Visitor() : EuphoniumBaseVisitor<Statement>() {
     val globalEnvironment = Environment.newGlobalEnvironment()
+    val environment = mutableListOf(globalEnvironment)
 
     override fun visit(tree: ParseTree?): Statement {
         synchronized(globalEnvironment) {
@@ -30,15 +31,7 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         }
 
         // extract return type
-        val retType = ctx.TYPE().last().toString().let {
-            when (it) {
-                "Int" -> IntType
-                "Bool" -> BoolType
-                "String" -> StringType
-                "Unit" -> UnitType
-                else -> throw Exception("unknown return type $it in function ${ctx.text}")
-            }
-        }
+        val retType = ctx.TYPE().last().toString().let { Type.of(it) }
 
         globalEnvironment.define(
                 symbol = ctx.ID(0).toString(),
@@ -65,7 +58,7 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         fun visitChildExpr(index: Int) = visit(ctx.expr(index)) as Expr
 
         // '(' expr ')'
-        if (ctx.children.first().text == "(" && ctx.children.last().text == ")") {
+        if (ctx.children.first().text == "(" && ctx.children.last().text == ")" && ctx.childCount == 3) {
             return visitChildExpr(0)
         }
 
@@ -93,6 +86,12 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
             return visit(ctx.expr(0))
         }
 
+        if ("=>" in ctx.children.map { it.text }) {
+            val parameters = ctx.ID().map { it.text } zip List(ctx.ID().size) { UninferredType }
+            val body = visit(ctx.expr(0)) as Expr
+            return FuncValue(parameters.toMap(), UninferredType, body, )
+        }
+
         return ctx.ID()?.let { VariableExpr(it.text) }
                 ?: ctx.STRING()?.let { StringValue(it.text) }
                 ?: ctx.INT()?.let { IntValue(it.text.toInt()) }
@@ -106,5 +105,9 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         val ctx = context!!
 
         return VarDeclaration(symbol = ctx.ID().text, expr = visit(ctx.expr()) as Expr)
+    }
+
+    private fun <R> withinScope(block: () -> R) {
+        environment.add(environment.last().newChildEnvironment())
     }
 }
