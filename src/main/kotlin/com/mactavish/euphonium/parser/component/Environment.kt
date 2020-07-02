@@ -5,7 +5,8 @@ class Environment private constructor(private val table: MutableMap<Symbol, Expr
     private var parent:Environment= this
 
     companion object{
-        fun newGlobalEnvironment():Environment=Environment()
+        fun newGlobalEnvironment(): Environment = Environment()
+        fun newUndefinedEnvironment(): Environment = Environment()
     }
 
     fun newChildEnvironment(table: MutableMap<Symbol, Expr> =HashMap()):Environment=

@@ -9,6 +9,16 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
     val globalEnvironment = Environment.newGlobalEnvironment()
     val environment = mutableListOf(globalEnvironment)
 
+    private val currentEnvironment: Environment = environment.last()
+    private fun enterNewEnvironment() {
+        environment.add(currentEnvironment.newChildEnvironment())
+    }
+
+    private fun exitCurrentEnvironment() {
+        environment.removeAt(environment.size - 1)
+    }
+
+
     override fun visit(tree: ParseTree?): Statement {
         synchronized(globalEnvironment) {
             return super.visit(tree)
@@ -86,13 +96,16 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
             return visit(ctx.expr(0))
         }
 
+        // function value
         if ("=>" in ctx.children.map { it.text }) {
-            val parameters = ctx.ID().map { it.text } zip List(ctx.ID().size) { UninferredType }
-            val body = visit(ctx.expr(0)) as Expr
-            return FuncValue(parameters.toMap(), UninferredType, body, )
+            return withinScope { newEnvironment ->
+                val parameters = ctx.ID().map { it.text } zip List(ctx.ID().size) { UninferredType }
+                val body = visit(ctx.expr(0)) as Expr
+                FuncValue(parameters.toMap(), UninferredType, body, newEnvironment)
+            }
         }
 
-        return ctx.ID()?.let { VariableExpr(it.text) }
+        return ctx.ID(0)?.let { VariableExpr(it.text, currentEnvironment) }
                 ?: ctx.STRING()?.let { StringValue(it.text) }
                 ?: ctx.INT()?.let { IntValue(it.text.toInt()) }
                 ?: ctx.BOOL()?.let { BoolValue(it.text!!.toBoolean()) }
@@ -104,10 +117,13 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
     override fun visitVardecl(context: EuphoniumParser.VardeclContext?): Statement {
         val ctx = context!!
 
-        return VarDeclaration(symbol = ctx.ID().text, expr = visit(ctx.expr()) as Expr)
+        return VarDeclaration(symbol = ctx.ID().text, expr = visit(ctx.expr()) as Expr, env = currentEnvironment)
     }
 
-    private fun <R> withinScope(block: () -> R) {
-        environment.add(environment.last().newChildEnvironment())
+    private fun <R> withinScope(block: (env: Environment) -> R): R {
+        enterNewEnvironment()
+        val ret = block(environment.last())
+        exitCurrentEnvironment()
+        return ret
     }
 }

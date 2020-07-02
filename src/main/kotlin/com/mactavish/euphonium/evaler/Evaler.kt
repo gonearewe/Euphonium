@@ -10,6 +10,6 @@ class Evaler(private val globalEnvironment: Environment) {
         FuncCallExpr(
                 globalEnvironment.resolve("main") ?: throw Exception("main function is not found"),
                 listOf(StringValue("arg"), IntValue(45))
-        ).evalIn(globalEnvironment).also { println(it) }
+        ).evalIn().also { println(it) }
     }
 }
