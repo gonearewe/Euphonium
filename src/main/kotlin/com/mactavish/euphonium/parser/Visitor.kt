@@ -9,7 +9,9 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
     val globalEnvironment = Environment.newGlobalEnvironment()
     val environment = mutableListOf(globalEnvironment)
 
-    private val currentEnvironment: Environment = environment.last()
+    private val currentEnvironment: Environment
+        get() = environment.last() // computed field, update for each access
+
     private fun enterNewEnvironment() {
         environment.add(currentEnvironment.newChildEnvironment())
     }
@@ -45,7 +47,9 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
 
         globalEnvironment.define(
                 symbol = ctx.ID(0).toString(),
-                expr = FuncValue(params, retType, visit(ctx.getChild(ctx.childCount - 1)) as Expr, globalEnvironment)
+                expr = FuncValue(params, retType,
+                        body = visit(ctx.getChild(ctx.childCount - 1)) as Expr,
+                        env = globalEnvironment)
         )
 
         return UnitValue // we don't need the result of this visitor actually
@@ -88,7 +92,10 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
             if (ctx.childCount == 3) {
                 return FuncCallExpr(visitChildExpr(0), listOf())
             }
-            return FuncCallExpr(visitChildExpr(0), (1 until ctx.expr().size).map { visitChildExpr(it) })
+            return FuncCallExpr(
+                    func = visitChildExpr(0),
+                    arguments = (1 until ctx.expr().size).map { visitChildExpr(it) }
+            )
         }
 
         // ( expr ';' ) is also an expr

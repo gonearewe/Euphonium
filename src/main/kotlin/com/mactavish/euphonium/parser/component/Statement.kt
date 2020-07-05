@@ -79,7 +79,8 @@ data class VariableExpr(val symbol: Symbol, override val env: Environment) : Exp
     override fun type(): Type =
             env.resolve(symbol)?.type() ?: throw Exception("resolve symbol: $symbol in environment: $env")
 
-    override fun evalIn(): Value = env.resolve(symbol)?.evalIn() ?: throw Exception()
+    override fun evalIn(): Value = env.resolve(symbol)?.evalIn()
+            ?: throw Exception("resolving \"$symbol\" in environment $env")
 }
 
 data class UnaryExpr(val op: Operator, val operand: Expr) : Expr() {

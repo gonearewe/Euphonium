@@ -9,12 +9,16 @@ class Environment private constructor(private val table: MutableMap<Symbol, Expr
         fun newUndefinedEnvironment(): Environment = Environment()
     }
 
-    fun newChildEnvironment(table: MutableMap<Symbol, Expr> =HashMap()):Environment=
-            Environment(table).also { it.parent=this }
+    fun newChildEnvironment(table: MutableMap<Symbol, Expr> = HashMap()): Environment =
+            Environment(table).also { it.parent = this }
 
-    fun resolve(symbol: Symbol)= table[symbol]
+    fun resolve(symbol: Symbol) = table[symbol]
 
-    fun define(symbol: Symbol,expr: Expr){
-        table[symbol]=expr
+    fun define(symbol: Symbol, expr: Expr) {
+        table[symbol] = expr
+    }
+
+    override fun toString(): String {
+        return "Environment(${table.keys})"
     }
 }
