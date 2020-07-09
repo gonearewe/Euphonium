@@ -25,9 +25,9 @@ data class VarDeclaration(override val symbol: Symbol, override val expr: Expr, 
 data class FuncDeclaration(override val symbol: Symbol, override val expr: Expr, override val env: Environment) : Declaration()
 
 sealed class Expr : Statement() {
-    override fun execute(): Value = evalIn()
+    override fun execute(): Value = eval()
 
-    abstract fun evalIn(): Value
+    abstract fun eval(): Value
 //    open fun type() :String =throw Exception("uninitialised expression type")
 //    abstract val value:Value
 //    open val children= mutableListOf<Expr>()
@@ -41,22 +41,22 @@ sealed class Value : Expr()
 
 data class IntValue(val i: Int = 0) : Value() {
     override fun type(): Type = IntType
-    override fun evalIn(): Value = this
+    override fun eval(): Value = this
 }
 
 data class StringValue(val s: String = "") : Value() {
     override fun type(): Type = StringType
-    override fun evalIn(): Value = this
+    override fun eval(): Value = this
 }
 
 data class BoolValue(val b: Boolean = false) : Value() {
     override fun type(): Type = BoolType
-    override fun evalIn(): Value = this
+    override fun eval(): Value = this
 }
 
 object UnitValue : Value() {
     override fun type(): Type = UnitType
-    override fun evalIn(): Value = this
+    override fun eval(): Value = this
 }
 
 // FuncValue represents an anonymous function literal.
@@ -64,28 +64,34 @@ data class FuncValue(
         val parameter: Map<Symbol, Type>,
         val retType: Type,
         val body: Expr,
-        override val env: Environment
+        override val env: Environment // its own environment for executing function
 ) : Value() {
     override fun type(): Type = FuncType(parameter.map { it.value }, retType)
 
-    override fun evalIn(): Value = this
+    override fun eval(): Value = this
 }
 
 ///////
 
-//data class LiteralExpr(override val value: Value):Expr()
+data class NativeExpr(val block: (Environment) -> Value) : Expr() {
+    override fun type(): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun eval(): Value = block(env)
+}
 
 data class VariableExpr(val symbol: Symbol, override val env: Environment) : Expr() {
     override fun type(): Type =
             env.resolve(symbol)?.type() ?: throw Exception("resolve symbol: $symbol in environment: $env")
 
-    override fun evalIn(): Value = env.resolve(symbol)?.evalIn()
+    override fun eval(): Value = env.resolve(symbol)?.eval()
             ?: throw Exception("resolving \"$symbol\" in environment $env")
 }
 
 data class UnaryExpr(val op: Operator, val operand: Expr) : Expr() {
-    override fun evalIn(): Value {
-        val operandValue = operand.evalIn()
+    override fun eval(): Value {
+        val operandValue = operand.eval()
         return when (op) {
             "+" -> operandValue
             "-" -> IntValue(-(operandValue as IntValue).i)
@@ -100,8 +106,8 @@ data class UnaryExpr(val op: Operator, val operand: Expr) : Expr() {
 }
 
 data class BinaryExpr(val op: Operator, val firstOperand: Expr, val secondOperand: Expr) : Expr() {
-    override fun evalIn(): Value {
-        val (first, second) = Pair(firstOperand.evalIn(), secondOperand.evalIn())
+    override fun eval(): Value {
+        val (first, second) = Pair(firstOperand.eval(), secondOperand.eval())
         return when (op) {
             "==" -> BoolValue(first == second)
             "!=" -> BoolValue(first != second)
@@ -127,44 +133,70 @@ data class BinaryExpr(val op: Operator, val firstOperand: Expr, val secondOperan
     }
 
     override fun type(): Type {
-        TODO("Not yet implemented")
+        val (firstType, secondType) = Pair(firstOperand.type(), secondOperand.type())
+        return when (op) {
+            in listOf("+", "-", "*", "/", "%") ->
+                if (firstType == IntType && secondType == IntType) IntType
+                else throw Exception("Int type operators expected for $op," +
+                        "$firstType and $secondType found")
+            in listOf(">", ">=", "<", "<=") ->
+                if (firstType == IntType && secondType == IntType) BoolType
+                else throw Exception("Int type operators expected for $op," +
+                        "$firstType and $secondType found")
+            else ->
+                if (firstOperand.type() == BoolType && secondOperand.type() == BoolType) BoolType
+                else throw Exception("bool type operators expected for $op," +
+                        " $firstType and $secondType found")
+        }
     }
 }
 
 data class BlockExpr(val statements: List<Statement> = mutableListOf()) : Expr() {
     override fun type(): Type = (statements.last() as Expr).type()
 
-    override fun evalIn(): Value {
+    override fun eval(): Value {
         (0 until statements.size - 1).forEach { statements[it].execute() }
-        return (statements.last() as Expr).evalIn()
+        return (statements.last() as Expr).eval()
     }
 }
 
 // if ( condition ) passExpr else elseExpr
 data class IfExpr(val condition: Expr, val passExpr: Expr, val elseExpr: Expr) : Expr() {
     override fun type(): Type {
-        TODO("Not yet implemented")
+        val passType = passExpr.type()
+        val elseType = elseExpr.type()
+        if (passType != elseExpr) {
+            throw Exception("different types in if expresion: pass type $passType, else type $elseType")
+        }
+        return elseType
     }
 
-    override fun evalIn(): Value {
-        TODO("Not yet implemented")
+    override fun eval(): Value {
+        if (condition.type() != BoolType) {
+            throw Exception("bool type expected in if condition, ${condition.type()} found")
+        }
+        return if (condition.eval() == BoolValue(true)) {
+            passExpr.eval()
+        } else {
+            elseExpr.eval()
+        }
     }
 }
 
-data class FuncCallExpr(val func: Expr, val arguments: List<Expr>) : Expr() {
+data class FuncCallExpr(val func: Expr, val arguments: List<Expr> = listOf()) : Expr() {
     override fun type(): Type {
         TODO("Not yet implemented")
     }
 
-    override fun evalIn(): Value {
-        val f = func.evalIn() as FuncValue
+    override fun eval(): Value {
+        val f = func.eval() as FuncValue
         val parameterNames = f.parameter.map { it.key }
 
         // put arguments into this function's environment
-        parameterNames.zip(arguments.map { it.evalIn() }
+        parameterNames.zip(arguments.map { it.eval() }
                 // NOTE: instead of just arguments, so Euphonium applies eager eval
         ).forEach { f.env.define(it.first, it.second) }
 
-        return f.body.evalIn() // eval in its own environment(the captured one from which the function is defined)
+        return f.body.eval() // eval in its own environment(the captured one from which the function is defined)
     }
 }

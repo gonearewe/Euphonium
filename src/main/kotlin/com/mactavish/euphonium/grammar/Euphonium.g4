@@ -48,7 +48,7 @@ vardecl : 'let' ID ':' TYPE '=' expr ';' ;
 
 typedecl : 'type' TYPENAME '=' TYPE ';' ;
 
-fundecl : 'fun' ID '(' ID ':' TYPE (',' ID ':' TYPE)* ')' ':' TYPE '=' expr ;
+fundecl : 'fun' ID '(' (ID ':' TYPE (',' ID ':' TYPE)*)? ')' (':' TYPE)? '=' expr ;
 
 //sublist : sub (',' sub)* ;
 //sub :   expr

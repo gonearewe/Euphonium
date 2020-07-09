@@ -1,15 +1,20 @@
 package com.mactavish.euphonium.evaler
 
-import com.mactavish.euphonium.parser.component.Environment
-import com.mactavish.euphonium.parser.component.FuncCallExpr
-import com.mactavish.euphonium.parser.component.IntValue
-import com.mactavish.euphonium.parser.component.StringValue
+import com.mactavish.euphonium.parser.component.*
 
 class Evaler(private val globalEnvironment: Environment) {
     fun eval() {
+        globalEnvironment.define("println", FuncValue(
+                parameter = mapOf("v" to IntType),
+                retType = UnitType,
+                body = NativeExpr { env ->
+                    println(env.resolve("v"))
+                    UnitValue
+                },
+                env = Environment.newGlobalEnvironment()
+        ))
         FuncCallExpr(
-                globalEnvironment.resolve("main") ?: throw Exception("main function is not found"),
-                listOf(StringValue("arg"), IntValue(45))
-        ).evalIn().also { println(it) }
+                globalEnvironment.resolve("main") ?: throw Exception("main function is not found")
+        ).eval().also { println(it) }
     }
 }
