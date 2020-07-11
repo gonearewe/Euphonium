@@ -57,6 +57,7 @@ data class BoolValue(val b: Boolean = false) : Value() {
 object UnitValue : Value() {
     override fun type(): Type = UnitType
     override fun eval(): Value = this
+    override fun toString(): String = "UnitValue"
 }
 
 // FuncValue represents an anonymous function literal.
@@ -73,7 +74,7 @@ data class FuncValue(
 
 ///////
 
-data class NativeExpr(val block: (Environment) -> Value) : Expr() {
+data class NativeExpr(val block: (Environment) -> Value, override val env: Environment) : Expr() {
     override fun type(): Type {
         TODO("Not yet implemented")
     }
