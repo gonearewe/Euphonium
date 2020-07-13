@@ -4,14 +4,13 @@ import com.mactavish.euphonium.parser.Parser
 
 
 fun main(){
-    val code=
-        """fun main(x:String,y:Int):Int={
-                #let y:Int = x/8+9-23/(11%2-8+9*1);
-                #let x:String = "ss/n/t";
-                print(!true&&false||true||(!true&& y>=28 ));
-            }
+    val code =
+            """fun main()=
+                if(5>1+2) {println(8-9*2);}
+                else {println(1);}
+            
         """
-    Parser().parse(code)
+    Parser().parse(code).eval()
 }
 
 

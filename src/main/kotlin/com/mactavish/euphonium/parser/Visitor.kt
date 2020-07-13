@@ -3,9 +3,35 @@ package com.mactavish.euphonium.parser
 import com.mactavish.euphonium.ast.EuphoniumBaseVisitor
 import com.mactavish.euphonium.ast.EuphoniumParser
 import com.mactavish.euphonium.parser.component.*
+import org.antlr.v4.runtime.tree.ParseTree
 
 class Visitor() : EuphoniumBaseVisitor<Statement>() {
-    private val globalEnvironment = Environment.newGlobalEnvironment()
+    val globalEnvironment = Environment.newGlobalEnvironment()
+    val environment = mutableListOf(globalEnvironment)
+
+    private val currentEnvironment: Environment
+        get() = environment.last() // computed field, update for each access
+
+    private fun enterNewEnvironment() {
+        environment.add(currentEnvironment.newChildEnvironment())
+    }
+
+    private fun exitCurrentEnvironment() {
+        environment.removeAt(environment.size - 1)
+    }
+
+
+    override fun visit(tree: ParseTree?): Statement {
+        synchronized(globalEnvironment) {
+            return super.visit(tree)
+        }
+    }
+
+    override fun visitStructdecl(context: EuphoniumParser.StructdeclContext?): Statement {
+        val ctx = context!!
+
+
+    }
 
     override fun visitFundecl(context: EuphoniumParser.FundeclContext?): Statement {
         val ctx = context!!
@@ -23,19 +49,17 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         }
 
         // extract return type
-        val retType = ctx.TYPE().last().toString().let {
-            when (it) {
-                "Int" -> IntType
-                "Bool" -> BoolType
-                "String" -> StringType
-                "Unit" -> UnitType
-                else -> throw Exception("unknown return type $it in function ${ctx.text}")
-            }
+        val retType = try {
+            ctx.TYPE().last().toString().let { Type.of(it) }
+        } catch (e: Exception) {
+            UnitType
         }
 
         globalEnvironment.define(
                 symbol = ctx.ID(0).toString(),
-                expr = FuncValue(params, retType, visit(ctx.getChild(ctx.childCount - 1)) as Expr, globalEnvironment)
+                expr = FuncValue(params, retType,
+                        body = visit(ctx.getChild(ctx.childCount - 1)) as Expr,
+                        env = globalEnvironment.newChildEnvironment())
         )
 
         return UnitValue // we don't need the result of this visitor actually
@@ -46,19 +70,21 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
 
         // block expr
         if (ctx.children.first().text == "{" && ctx.children.last().text == "}") {
-            val statements = mutableListOf<Statement>()
-            if (ctx.childCount >= 2) { // avoiding empty block body, two children mean '{' and '}'
-                for (i in 1 until ctx.childCount - 1) { // list statements
-                    statements.add(visit(ctx.getChild(i))) // collect statements in this block
+            return withinScope {
+                val statements = mutableListOf<Statement>()
+                if (ctx.childCount >= 2) { // avoiding empty block body, two children mean '{' and '}'
+                    for (i in 1 until ctx.childCount - 1) { // list statements
+                        statements.add(visit(ctx.getChild(i))) // collect statements in this block
+                    }
                 }
+                BlockExpr(statements)
             }
-            return BlockExpr(statements)
         }
 
         fun visitChildExpr(index: Int) = visit(ctx.expr(index)) as Expr
 
         // '(' expr ')'
-        if (ctx.children.first().text == "(" && ctx.children.last().text == ")") {
+        if (ctx.children.first().text == "(" && ctx.children.last().text == ")" && ctx.childCount == 3) {
             return visitChildExpr(0)
         }
 
@@ -71,14 +97,19 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         }
 
         if (ctx.children.first().text == "if") {
-            return IfExpr(visitChildExpr(0), visitChildExpr(1), visitChildExpr(2))
+            return withinScope {
+                IfExpr(condition = visitChildExpr(0), passExpr = visitChildExpr(1), elseExpr = visitChildExpr(2))
+            }
         }
 
         if (ctx.childCount >= 2 && ctx.children[1].text == "(" && ctx.children.last().text == ")") {
             if (ctx.childCount == 3) {
                 return FuncCallExpr(visitChildExpr(0), listOf())
             }
-            return FuncCallExpr(visitChildExpr(0), (1 until ctx.expr().size).map { visitChildExpr(it) })
+            return FuncCallExpr(
+                    func = visitChildExpr(0),
+                    arguments = (1 until ctx.expr().size).map { visitChildExpr(it) }
+            )
         }
 
         // ( expr ';' ) is also an expr
@@ -86,7 +117,16 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
             return visit(ctx.expr(0))
         }
 
-        return ctx.ID()?.let { VariableExpr(it.text) }
+        // function value
+        if ("=>" in ctx.children.map { it.text }) {
+            return withinScope { newEnvironment ->
+                val parameters = ctx.ID().map { it.text } zip List(ctx.ID().size) { UninferredType }
+                val body = visit(ctx.expr(0)) as Expr
+                FuncValue(parameters.toMap(), UninferredType, body, newEnvironment)
+            }
+        }
+
+        return ctx.ID(0)?.let { VariableExpr(it.text, currentEnvironment) }
                 ?: ctx.STRING()?.let { StringValue(it.text) }
                 ?: ctx.INT()?.let { IntValue(it.text.toInt()) }
                 ?: ctx.BOOL()?.let { BoolValue(it.text!!.toBoolean()) }
@@ -98,6 +138,16 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
     override fun visitVardecl(context: EuphoniumParser.VardeclContext?): Statement {
         val ctx = context!!
 
-        return VarDeclaration(symbol = ctx.ID().text, expr = visit(ctx.expr()) as Expr)
+        return VarDeclaration(symbol = ctx.ID().text, expr = visit(ctx.expr()) as Expr, env = currentEnvironment)
+    }
+
+    /**
+     * While visiting trees, if you need to enter a new lexical scope, wrap it with [withinScope].
+     */
+    private fun <R> withinScope(block: (env: Environment) -> R): R {
+        enterNewEnvironment()
+        val ret = block(environment.last())
+        exitCurrentEnvironment()
+        return ret
     }
 }
