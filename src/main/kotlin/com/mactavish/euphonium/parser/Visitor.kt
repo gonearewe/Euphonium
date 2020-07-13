@@ -27,6 +27,12 @@ class Visitor() : EuphoniumBaseVisitor<Statement>() {
         }
     }
 
+    override fun visitStructdecl(context: EuphoniumParser.StructdeclContext?): Statement {
+        val ctx = context!!
+
+
+    }
+
     override fun visitFundecl(context: EuphoniumParser.FundeclContext?): Statement {
         val ctx = context!!
 

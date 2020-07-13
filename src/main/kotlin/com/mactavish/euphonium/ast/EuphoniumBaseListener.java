@@ -11,7 +11,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
  * of the available methods.
  */
 public class EuphoniumBaseListener implements EuphoniumListener {
-	/**
+    /**
      * {@inheritDoc}
      *
      * <p>The default implementation does nothing.</p>
@@ -63,6 +63,24 @@ public class EuphoniumBaseListener implements EuphoniumListener {
      */
     @Override
     public void exitVardecl(EuphoniumParser.VardeclContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void enterStructdecl(EuphoniumParser.StructdeclContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void exitStructdecl(EuphoniumParser.StructdeclContext ctx) {
     }
 
     /**
@@ -130,8 +148,10 @@ public class EuphoniumBaseListener implements EuphoniumListener {
 
     /**
      * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void visitErrorNode(ErrorNode node) { }
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void visitErrorNode(ErrorNode node) {
+    }
 }

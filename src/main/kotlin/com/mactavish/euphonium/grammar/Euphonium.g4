@@ -46,6 +46,10 @@ vardecl : 'let' ID ':' TYPE '=' expr ';' ;
 
 // top level declration
 
+structdecl : 'struct' TYPENAME '=' '{' (ID ':' TYPE)+ '}' ;
+
+uniondecl : 'data' TYPENAME '=' ('|' TYPENAME (TYPENAME ('*' TYPENAME)*)?)+ ;
+
 typedecl : 'type' TYPENAME '=' TYPE ';' ;
 
 fundecl : 'fun' ID '(' (ID ':' TYPE (',' ID ':' TYPE)*)? ')' (':' TYPE)? '=' expr ;
