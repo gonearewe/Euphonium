@@ -9,7 +9,7 @@ sealed trait Op {
 object Op {
   implicit def lit2UnaryOp(s: String): BinaryOp =
     Map("+" -> ADD(), "-" -> SUB(), "*" -> MUL(), "/" -> DIV(), "%" -> MOD(),
-      "==" -> EQ(), "!=" -> NE(), "<" -> LT(), ">" -> GT(),
+      "==" -> EQ(), "!=" -> NE(), "<" -> LT(),"<="->LE(), ">" -> GT(),">="->GE(),
       "&&" -> AND(), "||" -> OR())(s)
 
   implicit def lit2BinaryOp(s:String):UnaryOp=
@@ -51,8 +51,16 @@ object Op {
     override val lit: String = "<"
   }
 
+  case class LE() extends BinaryOp {
+    override val lit: String = "<="
+  }
+
   case class GT() extends BinaryOp {
     override val lit: String = ">"
+  }
+
+  case class GE() extends BinaryOp {
+    override val lit: String = ">="
   }
 
   case class AND() extends BinaryOp {

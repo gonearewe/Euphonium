@@ -16,19 +16,20 @@ sealed trait Def extends Statement
 
 object Def {
 
-  case class MethodDef(name: OrdinaryIdent, params: List[LocalVarDef], ret: TypeLiteral, body: Expr) extends Def
+  case class MethodDef(name: OrdinaryIdent, params: List[LocalVarDef], ret: TypeIdent, body: Expr) extends Def
 
-  case class FieldDef(name: OrdinaryIdent, typ: TypeLiteral, init: Option[Expr]) extends Def
+  case class FieldDef(name: OrdinaryIdent, typ: TypeIdent, init: Option[Expr] = None) extends Def
 
-  case class LocalVarDef(name: OrdinaryIdent, typ: TypeLiteral, init: Option[Expr]) extends Def
+  case class LocalVarDef(name: OrdinaryIdent, typ: TypeIdent, init: Option[Expr] = None) extends Def
 
-  case class ClassDef(name: TypeIdent, fields: FieldDef, methods: MethodDef) extends Def
+  case class ClassDef(name: TypeIdent, consParams: List[LocalVarDef], fields: List[FieldDef], methods: List[MethodDef]) extends
+    Def
 
 }
 
 // common expression
 
-case class Binary(op: BinaryOp, operands: (Expr, Expr)) extends Expr{
+case class Binary(op: BinaryOp, operands: (Expr, Expr)) extends Expr {
   override def toString: String = s"($op ${operands._1} ${operands._2})"
 }
 
