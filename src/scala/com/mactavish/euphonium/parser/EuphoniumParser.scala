@@ -3,7 +3,7 @@ package com.mactavish.euphonium.parser
 import com.codecommit.gll._
 import com.mactavish.euphonium.parser.Def._
 import com.mactavish.euphonium.parser.Identifier.{OrdinaryIdent, TypeIdent}
-import com.mactavish.euphonium.parser.Literal.IntLit
+import com.mactavish.euphonium.parser.Literal._
 import com.mactavish.euphonium.parser.Op._
 
 
@@ -26,11 +26,11 @@ class EuphoniumParser extends RegexParsers {
     }
 
   private lazy val block: Parser[Block] =
-    "{" ~> (expr + ";") <~ ";".? <~ "}" ^^ {
+    "{" ~> ((expr|localVarDef) + ";") <~ ";".? <~ "}" ^^ {
       Block
     }
 
-  private lazy val expr0: Parser[Expr] = ifExpr | block | intLit | ordinaryIdent | "(" ~> expr <~ ")"
+  private lazy val expr0: Parser[Expr] = ifExpr | block | boolLit | stringLit | intLit | ordinaryIdent | "(" ~> expr <~ ")"
 
   private lazy val expr1: Parser[Expr] = (
     "!" ~ expr1 ^^ { (op, e) => Unary(op, e) }
@@ -94,6 +94,13 @@ class EuphoniumParser extends RegexParsers {
 
   private lazy val intLit: Parser[IntLit] = """^\d+""".r ^^ { num => IntLit(num.toInt) }
 
+  private lazy val boolLit: Parser[BoolLit] = (
+    "true" ^^ { _ => BoolLit(true) }
+      | "false" ^^ { _ => BoolLit(false) }
+    )
+
+  private lazy val stringLit: Parser[StringLit] = """".*"""".r ^^ { s => StringLit(s.substring(1, s.length - 1)) }
+
   private lazy val typeIdent: Parser[TypeIdent] = """^[A-Z]\w*""".r ^^ { c => TypeIdent(c) }
 
   private lazy val ordinaryIdent: Parser[OrdinaryIdent] = """\w+""".r ^^ { c => OrdinaryIdent(c) }
@@ -107,11 +114,9 @@ object EuphoniumParser {
       """
         |fun main(arg:String):Int ={
         | if(2-1+3>8*7){
-        |     67+90;
-        |     0/
-        |     9;
+        |     val x:Int = 87;
         |     {
-        |       1
+        |       x
         |     }
         | }else{
         |     66
