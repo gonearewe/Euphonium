@@ -1,13 +1,16 @@
 package com.mactavish.euphonium.parser
 
 import com.codecommit.gll._
-import com.mactavish.euphonium.parser.Def._
-import com.mactavish.euphonium.parser.Identifier.{OrdinaryIdent, TypeIdent}
-import com.mactavish.euphonium.parser.Literal._
+import com.mactavish.euphonium.Phase
+import com.mactavish.euphonium.parser.SyntaxTree._
+import com.mactavish.euphonium.parser.SyntaxTree.Def._
+import com.mactavish.euphonium.parser.SyntaxTree.Literal._
 import com.mactavish.euphonium.parser.Op._
 
+import java.io.InputStream
 
-class EuphoniumParser extends RegexParsers {
+
+class Parser extends RegexParsers with Phase[InputStream,]{
   lazy val expr: Parser[Expr] = expr6
   lazy val classDef: Parser[Expr] =
     ("class" ~> typeIdent) ~ opt("(" ~> paramList <~ ")") ~ ("{" ~> rep(methodDef | fieldDef) <~ "}") ^^ {
@@ -107,9 +110,9 @@ class EuphoniumParser extends RegexParsers {
 
 }
 
-object EuphoniumParser {
+object Parser {
   def main(args: Array[String]): Unit = {
-    val p = new EuphoniumParser
+    val p = new Parser
     val s = LineStream(
       """
         |fun main(arg:String):Int ={

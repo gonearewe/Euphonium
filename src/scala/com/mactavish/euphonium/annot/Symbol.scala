@@ -8,7 +8,7 @@ sealed trait Symbol extends Annot {
 
   def name: String
 
-  def domain: Scope
+  var domain: Scope =_
 }
 
 object Symbol {
@@ -18,7 +18,7 @@ object Symbol {
 
     override def name: String = "Any"
 
-    override def domain: Scope = ???
+
   }
 
   class ClassSymbol(tree: ClassDef, val parent: Either[AnySymbol.type, ClassSymbol]) extends Symbol {
@@ -26,23 +26,25 @@ object Symbol {
 
     override def name: String = tree.name.literal
 
-    override def domain: Scope = ???
+
   }
 
-  class FieldSymbol(tree: FieldDef, val owner: ClassSymbol, val typ: Type) extends Symbol {
+  sealed trait MemberSymbol extends Symbol
+
+  class FieldSymbol(tree: FieldDef, val owner: ClassSymbol, val typ: Type) extends MemberSymbol {
     override type Typ = Type
 
     override def name: String = tree.name.literal
 
-    override def domain: Scope = ???
+
   }
 
-  class MethodSymbol(tree: MethodDef, val owner: ClassSymbol, val typ: FunType) extends Symbol {
+  class MethodSymbol(tree: MethodDef, val owner: ClassSymbol, val typ: FunType) extends MemberSymbol {
     override type Typ = FunType
 
     override def name: String = ???
 
-    override def domain: Scope = ???
+
   }
 
   class LocalVarSymbol(tree: LocalVarDef, val typ: Type) extends Symbol {
@@ -50,6 +52,6 @@ object Symbol {
 
     override def name: String = ???
 
-    override def domain: Scope = ???
+
   }
 }
