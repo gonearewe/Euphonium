@@ -13,7 +13,7 @@ trait Tree {
   type BlockAnnot <: Annot
   type ExprAnnot <: Annot
 
-  case class TopLevel(classes: List[Def.ClassDef])(implicit annot: TopLevelAnnot) extends Tree
+  case class TopLevel(classes: List[Tree.Def.ClassDef])(implicit annot: TopLevelAnnot) extends Tree
 
   sealed trait Expr extends Tree
 
@@ -31,7 +31,8 @@ trait Tree {
 
     case class LocalVarDef(name: OrdinaryIdent, typ: TypeIdent, init: Option[Expr] = None)(implicit annot: LocalVarAnnot) extends Def
 
-    case class ClassDef(name: TypeIdent, consParams: List[LocalVarDef], fields: List[FieldDef], methods: List[MethodDef])(implicit annot: ClassAnnot) extends Def
+    case class ClassDef(name: TypeIdent, consParams: List[LocalVarDef], parent: Option[ClassDef] = None,
+                        fields: List[FieldDef], methods: List[MethodDef])(implicit annot: ClassAnnot) extends Def
 
   }
 
