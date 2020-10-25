@@ -2,24 +2,110 @@ package com.mactavish.euphonium.parser
 
 import com.codecommit.gll._
 import com.mactavish.euphonium.Phase
+import com.mactavish.euphonium.annot.Type.AnyType
 import com.mactavish.euphonium.parser.SyntaxTree._
 import com.mactavish.euphonium.parser.SyntaxTree.Def._
 import com.mactavish.euphonium.parser.SyntaxTree.Literal._
 import com.mactavish.euphonium.parser.Op._
+import java.io.{InputStream, Reader}
 
-import java.io.InputStream
+import scala.annotation.tailrec
+import scala.collection.mutable
 
+object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
+  override def apply(input: Reader): Option[SyntaxTree.TopLevel] = {
+    // parse `ClassDef` for constructing `TopLevel`
+    val parseResult = classDef(LineStream(input)).toList map {
+      case Success(value, _) => value
+      case Failure(reason, _) => reason match {
+        case _ => ???
+        // fault handle
+        //case ExpectedLiteral(expect, received) =>
+        //case ExpectedRegex(regex) =>
+        //case UnexpectedEndOfStream(expected) =>
+        //case UnexpectedTrailingChars(received) =>
+        //case UnexpectedChars(received) =>
+        //case SyntaxError =>
+      }
+    }
+    val parsedClasses = parseResult.map { case (classDef, _) => classDef }
 
-class Parser extends RegexParsers with Phase[InputStream,]{
-  lazy val expr: Parser[Expr] = expr6
-  lazy val classDef: Parser[Expr] =
-    ("class" ~> typeIdent) ~ opt("(" ~> paramList <~ ")") ~ ("{" ~> rep(methodDef | fieldDef) <~ "}") ^^ {
-      (id, consParams, body) =>
-        ClassDef(id, consParams.getOrElse(List()),
-          for (e@FieldDef(_, _, _) <- body) yield e,
-          for (e@MethodDef(_, _, _, _) <- body) yield e)
+    // check if there's any duplicated class definition
+    val classNames: List[TypeIdent] = parsedClasses.map {
+      _.name
+    }
+    if (classNames.size != classNames.distinct.size) throw new Exception("duplicated class definition")
+
+    // check if there's any undefined class appearing in inheritance
+    val classNameSet: Set[TypeIdent] = classNames.toSet
+    parseResult.filter {
+      _._2.isDefined
+    }.flatMap { case (_, Some(parent)) =>
+      if (classNameSet(parent)) None
+      else Some(parent.literal)
+    } match {
+      case x if x != Nil => throw new Exception(s"undefined class(es) ${x.mkString(", ")}")
     }
 
+    // check if there's any class inheritance cycle
+    val inheritanceMap = parseResult.flatMap {
+      case (classDef, None) => None
+      case (ClassDef(name, _, _, _, _), Some(parent)) => Some(name -> parent)
+    }.toMap // inheritanceMap is a map from class(name) to its parent(name), class that has no superclass isn't included
+    inheritanceMap.flatMap { case (start, _) =>
+      @tailrec
+      def foundCycle(c: TypeIdent): Boolean = {
+        if (!inheritanceMap.contains(c)) false
+        else if (inheritanceMap(c) == start) true
+        else foundCycle(inheritanceMap(c))
+      }
+
+      Some(start).filter(foundCycle)
+    } match {
+      case x if x != Nil => throw new Exception(s"class inheritance cycle found, including ${x.mkString(", ")}")
+    }
+
+    // complete all `ClassDef`
+    val nameClassMap = parsedClasses.map { c => c.name -> c }.toMap // a map from each class's name to itself
+    val completedNameClassMap = mutable.HashMap[TypeIdent, ClassDef]()
+
+    def completeClassDef(c: ClassDef): Unit = {
+      val name = c.name
+      // I don't have a superclass, so I'm already completed (my parent is truly `None`)
+      if (!inheritanceMap.contains(name)) {
+        completedNameClassMap(name) = c
+        return
+      }
+      // I need my superclass completed(shown in `completedNameClassMap`) before I do
+      val parent = inheritanceMap(name)
+      if (!completedNameClassMap.contains(parent)) completeClassDef(nameClassMap(parent))
+      // complete myself with field `parent` filled
+      completedNameClassMap(name) = nameClassMap(name).copy(parent = Some(completedNameClassMap(parent)))
+    }
+
+    nameClassMap.values.foreach(completeClassDef)
+
+    Some(TopLevel(classes = completedNameClassMap.values.toList))
+  }
+
+  private lazy val expr: Parser[Expr] = expr6
+
+  /**
+   * Parse class definitions, output a pair of `ClassDef` and its parent's TypeIdent (if any),
+   * since we can't parse `ClassDef` recursively.
+   * We can complete the `ClassDef` later manually.
+   */
+  private lazy val classDef: Parser[(ClassDef, Option[TypeIdent])] =
+    ("class" ~> typeIdent) ~ opt("(" ~> paramList <~ ")") ~ opt("extends" ~> typeIdent) ~
+      ("{" ~> rep(methodDef | fieldDef) <~ "}") ^^ {
+      (id, consParams, parent, body) =>
+        ClassDef(
+          name = id,
+          consParams = consParams.getOrElse(List()),
+          fields = for (e: FieldDef <- body) yield e,
+          methods = for (e: MethodDef <- body) yield e
+        ) -> parent
+    }
 
   // expression level parsers
 
@@ -29,7 +115,7 @@ class Parser extends RegexParsers with Phase[InputStream,]{
     }
 
   private lazy val block: Parser[Block] =
-    "{" ~> ((expr|localVarDef) + ";") <~ ";".? <~ "}" ^^ {
+    "{" ~> ((expr | localVarDef) + ";") <~ ";".? <~ "}" ^^ {
       Block
     }
 

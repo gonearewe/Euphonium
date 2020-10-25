@@ -8,20 +8,21 @@ sealed trait Type {
 
 object Type {
 
-  sealed trait BaseType extends Type {
+  sealed trait PrimitiveType extends Type {
     override def <=(that: Type): Boolean =
       if (this == that || that == AnyType || this == NothingType) true else false
   }
 
-  object UnitType extends BaseType
+  object UnitType extends PrimitiveType
 
-  object AnyType extends BaseType
+  // AnyType is the root type of the whole type system, it's every type's supertype
+  object AnyType extends PrimitiveType
 
-  object NothingType extends BaseType
+  object NothingType extends PrimitiveType
 
-  object IntType extends BaseType
+  object IntType extends PrimitiveType
 
-  object BoolType extends BaseType
+  object BoolType extends PrimitiveType
 
   case class ClassType(name: String, parent: Type = AnyType) extends Type {
     override def <=(that: Type): Boolean = if (this == that) true else parent <= that

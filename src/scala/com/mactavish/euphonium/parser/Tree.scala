@@ -13,13 +13,15 @@ trait Tree {
   type BlockAnnot <: Annot
   type ExprAnnot <: Annot
 
-  case class TopLevel(classes: List[Tree.Def.ClassDef])(implicit annot: TopLevelAnnot) extends Tree
+  sealed trait Node extends Product
 
-  sealed trait Expr extends Tree
+  sealed trait Expr extends Node
 
   sealed trait Statement extends Expr
 
   sealed trait Def extends Statement
+
+  case class TopLevel(classes: List[Def.ClassDef])(implicit annot: TopLevelAnnot) extends Node
 
   // definition(or declaration)
 

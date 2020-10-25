@@ -9,7 +9,7 @@ object Namer extends Phase[Syn.TopLevel, TypedTree.TopLevel] {
   type Typed = TypedTree.type
 
   def apply(topLevel: Syn.TopLevel): Option[Typed.TopLevel] = {
-    //    new Typed.TopLevel()
+    // check if there's any duplicated class definition
     topLevel.classes.foldRight(Set[String]()) {
       (clazz, set) =>
         if (set.contains(clazz.name.literal))
@@ -18,8 +18,8 @@ object Namer extends Phase[Syn.TopLevel, TypedTree.TopLevel] {
           set + clazz.name.literal
     }
 
-
-    val visited= mutable.Map[String, String]()
+    // check if there's any class inheritance cycle
+    val visited= mutable.Map[String, String]() // class's name -> root class's name
     def visit(clazz: Syn.Def.ClassDef, start: String):Unit = {
       val node = clazz.name.literal
       if (visited.contains(node) && visited(node) == start) {
@@ -39,6 +39,8 @@ object Namer extends Phase[Syn.TopLevel, TypedTree.TopLevel] {
         visit(clazz,node)
       }
     }
+
+    
     ???
   }
 
