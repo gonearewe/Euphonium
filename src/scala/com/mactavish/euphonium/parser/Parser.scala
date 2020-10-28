@@ -2,6 +2,7 @@ package com.mactavish.euphonium.parser
 
 import com.codecommit.gll._
 import com.mactavish.euphonium.Phase
+import com.mactavish.euphonium.{Result => Res, Success => Ok, Failure => Fail}
 import com.mactavish.euphonium.annot.Type.AnyType
 import com.mactavish.euphonium.parser.SyntaxTree._
 import com.mactavish.euphonium.parser.SyntaxTree.Def._
@@ -11,9 +12,10 @@ import java.io.{InputStream, Reader}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import java.lang.{String => FailMsg}
 
-object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
-  override def apply(input: Reader): Option[SyntaxTree.TopLevel] = {
+object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailMsg] {
+  override def apply(input: Reader): Res[SyntaxTree.TopLevel, FailMsg] = {
     // parse `ClassDef` for constructing `TopLevel`
     val parseResult = classDef(LineStream(input)).toList map {
       case Success(value, _) => value
@@ -29,12 +31,11 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
       }
     }
     val parsedClasses = parseResult.map { case (classDef, _) => classDef }
-
     // check if there's any duplicated class definition
     val classNames: List[TypeIdent] = parsedClasses.map {
       _.name
     }
-    if (classNames.size != classNames.distinct.size) throw new Exception("duplicated class definition")
+    if (classNames.size != classNames.distinct.size) return Fail("duplicated class definition")
 
     // check if there's any undefined class appearing in inheritance
     val classNameSet: Set[TypeIdent] = classNames.toSet
@@ -44,7 +45,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
       if (classNameSet(parent)) None
       else Some(parent.literal)
     } match {
-      case x if x != Nil => throw new Exception(s"undefined class(es) ${x.mkString(", ")}")
+      case x if x != Nil => return Fail(s"undefined class(es) ${x.mkString(", ")}")
     }
 
     // check if there's any class inheritance cycle
@@ -62,7 +63,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
 
       Some(start).filter(foundCycle)
     } match {
-      case x if x != Nil => throw new Exception(s"class inheritance cycle found, including ${x.mkString(", ")}")
+      case x if x != Nil => return Fail(s"class inheritance cycle found, including ${x.mkString(", ")}")
     }
 
     // complete all `ClassDef`
@@ -85,10 +86,10 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
 
     nameClassMap.values.foreach(completeClassDef)
 
-    Some(TopLevel(classes = completedNameClassMap.values.toList))
+    Ok(TopLevel(classes = completedNameClassMap.values.toList))
   }
 
-  private lazy val expr: Parser[Expr] = expr6
+  private lazy val expr: Parser[Expr] = funCall | expr6
 
   /**
    * Parse class definitions, output a pair of `ClassDef` and its parent's TypeIdent (if any),
@@ -97,13 +98,14 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
    */
   private lazy val classDef: Parser[(ClassDef, Option[TypeIdent])] =
     ("class" ~> typeIdent) ~ opt("(" ~> paramList <~ ")") ~ opt("extends" ~> typeIdent) ~
-      ("{" ~> rep(methodDef | fieldDef) <~ "}") ^^ {
+      opt("{" ~> rep(methodDef | fieldDef) <~ "}") ^^ {
       (id, consParams, parent, body) =>
         ClassDef(
           name = id,
-          consParams = consParams.getOrElse(List()),
-          fields = for (e: FieldDef <- body) yield e,
-          methods = for (e: MethodDef <- body) yield e
+          consParams = consParams.getOrElse(Nil),
+          // use `collect` to filter value of specific type without casting it afterwards
+          fields = body.getOrElse(Nil).collect { case x: FieldDef => x },
+          methods = body.getOrElse(Nil).collect { case x: MethodDef => x }
         ) -> parent
     }
 
@@ -116,7 +118,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
 
   private lazy val block: Parser[Block] =
     "{" ~> ((expr | localVarDef) + ";") <~ ";".? <~ "}" ^^ {
-      Block
+      Block(_)
     }
 
   private lazy val expr0: Parser[Expr] = ifExpr | block | boolLit | stringLit | intLit | ordinaryIdent | "(" ~> expr <~ ")"
@@ -150,6 +152,15 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
     expr6 ~ "||" ~ expr6 ^^ binary
       | expr5
     )
+
+  private lazy val funCall: Parser[FunCall] =
+    (ordinaryIdent | funCall) ~ ("(" ~> opt(expr6 + ",") <~ ")") ^^ {
+      (caller, args) =>
+        caller match {
+          case c: FunCall => FunCall(Left(c), args.getOrElse(Nil))
+          case c: OrdinaryIdent => FunCall(Right(c), args.getOrElse(Nil))
+        }
+    }
 
   private def binary(a: Expr, op: String, b: Expr) = Binary(op, (a, b))
 
@@ -194,25 +205,4 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel] {
 
   private lazy val ordinaryIdent: Parser[OrdinaryIdent] = """\w+""".r ^^ { c => OrdinaryIdent(c) }
 
-}
-
-object Parser {
-  def main(args: Array[String]): Unit = {
-    val p = new Parser
-    val s = LineStream(
-      """
-        |fun main(arg:String):Int ={
-        | if(2-1+3>8*7){
-        |     val x:Int = 87;
-        |     {
-        |       x
-        |     }
-        | }else{
-        |     66
-        | };
-        |};
-        |""".stripMargin)
-
-    println(p.methodDef(s))
-  }
 }

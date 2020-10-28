@@ -7,75 +7,75 @@ sealed trait Op {
 }
 
 object Op {
-  implicit def lit2UnaryOp(s: String): BinaryOp =
-    Map("+" -> ADD(), "-" -> SUB(), "*" -> MUL(), "/" -> DIV(), "%" -> MOD(),
-      "==" -> EQ(), "!=" -> NE(), "<" -> LT(),"<="->LE(), ">" -> GT(),">="->GE(),
-      "&&" -> AND(), "||" -> OR())(s)
+  implicit def lit2BinaryOp(s: String): BinaryOp =
+    Map("+" -> ADD, "-" -> SUB, "*" -> MUL, "/" -> DIV, "%" -> MOD,
+      "==" -> EQ, "!=" -> NE, "<" -> LT,"<="->LE, ">" -> GT,">="->GE,
+      "&&" -> AND, "||" -> OR)(s)
 
-  implicit def lit2BinaryOp(s:String):UnaryOp=
-    Map("!" -> NOT(), "-" -> NEG())(s)
+  implicit def lit2UnaryOp(s:String):UnaryOp=
+    Map("!" -> NOT, "-" -> NEG)(s)
 
   sealed trait BinaryOp extends Op
 
   sealed trait UnaryOp extends Op
 
-  case class ADD() extends BinaryOp {
+  object ADD extends BinaryOp {
     override val lit: String = "+"
   }
 
-  case class SUB() extends BinaryOp {
+  object SUB extends BinaryOp {
     override val lit: String = "-"
   }
 
-  case class MUL() extends BinaryOp {
+  object MUL extends BinaryOp {
     override val lit: String = "*"
   }
 
-  case class DIV() extends BinaryOp {
+  object DIV extends BinaryOp {
     override val lit: String = "/"
   }
 
-  case class MOD() extends BinaryOp {
+  object MOD extends BinaryOp {
     override val lit: String = "%"
   }
 
-  case class EQ() extends BinaryOp {
+  object EQ extends BinaryOp {
     override val lit: String = "=="
   }
 
-  case class NE() extends BinaryOp {
+  object NE extends BinaryOp {
     override val lit: String = "!="
   }
 
-  case class LT() extends BinaryOp {
+  object LT extends BinaryOp {
     override val lit: String = "<"
   }
 
-  case class LE() extends BinaryOp {
+  object LE extends BinaryOp {
     override val lit: String = "<="
   }
 
-  case class GT() extends BinaryOp {
+  object GT extends BinaryOp {
     override val lit: String = ">"
   }
 
-  case class GE() extends BinaryOp {
+  object GE extends BinaryOp {
     override val lit: String = ">="
   }
 
-  case class AND() extends BinaryOp {
+  object AND extends BinaryOp {
     override val lit: String = "&&"
   }
 
-  case class OR() extends BinaryOp {
+  object OR extends BinaryOp {
     override val lit: String = "||"
   }
 
-  case class NEG() extends UnaryOp {
+  object NEG extends UnaryOp {
     override val lit: String = "-"
   }
 
-  case class NOT() extends UnaryOp {
+  object NOT extends UnaryOp {
     override val lit: String = "!"
   }
 

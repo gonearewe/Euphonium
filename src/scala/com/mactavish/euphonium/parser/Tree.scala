@@ -27,14 +27,20 @@ trait Tree {
 
   object Def {
 
-    case class MethodDef(name: OrdinaryIdent, params: List[LocalVarDef], ret: TypeIdent, body: Expr)(implicit annot: MethodAnnot) extends Def
+    case class MethodDef(name: OrdinaryIdent, params: List[LocalVarDef] = Nil, ret: TypeIdent, body: Expr)
+                        (implicit annot: MethodAnnot) extends Def
 
     case class FieldDef(name: OrdinaryIdent, typ: TypeIdent, init: Option[Expr] = None)(implicit annot: FieldAnnot) extends Def
 
     case class LocalVarDef(name: OrdinaryIdent, typ: TypeIdent, init: Option[Expr] = None)(implicit annot: LocalVarAnnot) extends Def
 
-    case class ClassDef(name: TypeIdent, consParams: List[LocalVarDef], parent: Option[ClassDef] = None,
-                        fields: List[FieldDef], methods: List[MethodDef])(implicit annot: ClassAnnot) extends Def
+    case class ClassDef(
+                         name: TypeIdent,
+                         consParams: List[LocalVarDef] = Nil,
+                         parent: Option[ClassDef] = None,
+                         fields: List[FieldDef] = Nil,
+                         methods: List[MethodDef] = Nil
+                       )(implicit annot: ClassAnnot) extends Def
 
   }
 
@@ -51,6 +57,8 @@ trait Tree {
   case class Block(expressions: List[Expr])(implicit annot: ExprAnnot) extends Expr
 
   case class If(condition: Expr, passExpr: Expr, elseExpr: Expr)(implicit annot: ExprAnnot) extends Expr
+
+  case class FunCall(caller: Either[FunCall, OrdinaryIdent], args: List[Expr] = Nil)(implicit annot: ExprAnnot) extends Expr
 
   // Identifier
 
@@ -87,6 +95,12 @@ trait Tree {
     case class TString() extends TypeLiteral
 
     case class TUnit() extends TypeLiteral
+
+    implicit def intLitWrapper(value: Int): IntLit = IntLit(value)
+
+    implicit def boolLitWrapper(value: Boolean): BoolLit = BoolLit(value)
+
+    implicit def stringLitWrapper(value: String): StringLit = StringLit(value)
 
   }
 
