@@ -1,18 +1,17 @@
 package com.mactavish.euphonium.parser
 
+import java.io.Reader
+import java.lang.{String => FailMsg}
+
 import com.codecommit.gll._
-import com.mactavish.euphonium.Phase
-import com.mactavish.euphonium.{Result => Res, Success => Ok, Failure => Fail}
-import com.mactavish.euphonium.annot.Type.AnyType
-import com.mactavish.euphonium.parser.SyntaxTree._
+import com.mactavish.euphonium.parser.Op._
 import com.mactavish.euphonium.parser.SyntaxTree.Def._
 import com.mactavish.euphonium.parser.SyntaxTree.Literal._
-import com.mactavish.euphonium.parser.Op._
-import java.io.{InputStream, Reader}
+import com.mactavish.euphonium.parser.SyntaxTree._
+import com.mactavish.euphonium.{Phase, Failure => Fail, Result => Res, Success => Ok}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import java.lang.{String => FailMsg}
 
 object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailMsg] {
   override def apply(input: Reader): Res[SyntaxTree.TopLevel, FailMsg] = {
@@ -20,7 +19,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
     val parseResult = classDef(LineStream(input)).toList map {
       case Success(value, _) => value
       case Failure(reason, _) => reason match {
-        case _ => ???
+        case x => return Fail(x.toString)
         // fault handle
         //case ExpectedLiteral(expect, received) =>
         //case ExpectedRegex(regex) =>
@@ -45,7 +44,8 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
       if (classNameSet(parent)) None
       else Some(parent.literal)
     } match {
-      case x if x != Nil => return Fail(s"undefined class(es) ${x.mkString(", ")}")
+      case Nil => ()
+      case x => return Fail(s"undefined class(es) ${x.mkString(", ")}")
     }
 
     // check if there's any class inheritance cycle
@@ -63,7 +63,8 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
 
       Some(start).filter(foundCycle)
     } match {
-      case x if x != Nil => return Fail(s"class inheritance cycle found, including ${x.mkString(", ")}")
+      case Nil => ()
+      case x => return Fail(s"class inheritance cycle found, including ${x.mkString(", ")}")
     }
 
     // complete all `ClassDef`
@@ -187,7 +188,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
     }
 
   private lazy val localVarDef: Parser[LocalVarDef] =
-    ("val" ~> ordinaryIdent) ~ (":" ~> typeIdent) ~ opt("=" ~> expr) ^^ {
+    ("val" ~> ordinaryIdent) ~ (":" ~> typeIdent) ~ opt("=" ~> expr) <~ ";" ^^ {
       (id, typ, init) => LocalVarDef(id, typ, init)
     }
 

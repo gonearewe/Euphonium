@@ -1,12 +1,12 @@
 package com.mactavish.euphonium.parser
 
-import java.io.{Reader, StringReader}
+import java.io.StringReader
 
-import com.mactavish.euphonium.UnitTestSpec
-import com.mactavish.euphonium.parser.SyntaxTree.Def._
-import com.mactavish.euphonium.parser.SyntaxTree._
-import com.mactavish.euphonium.parser.SyntaxTree.Literal._
 import com.mactavish.euphonium.parser.Op._
+import com.mactavish.euphonium.parser.SyntaxTree.Def._
+import com.mactavish.euphonium.parser.SyntaxTree.Literal._
+import com.mactavish.euphonium.parser.SyntaxTree._
+import com.mactavish.euphonium.{Failure, Success, UnitTestSpec}
 
 class ParserTest extends UnitTestSpec {
   implicit def str2TypeIdent(str: String): SyntaxTree.TypeIdent = TypeIdent(str)
@@ -25,16 +25,16 @@ class ParserTest extends UnitTestSpec {
       |""".stripMargin -> List(ClassDef("Main")),
     """
       |class Main(b: String) {
-      |   val a: Int = 5
-      |   val b: String = b
-      |   val c: Bool = false && true
+      |   val a: Int = 5;
+      |   val b: String = b;
+      |   val c: Bool = false && true;
       |
-      |   fun one: Int = 1
-      |   fun two(): Int = 2
+      |   fun one: Int = 1;
+      |   fun two(): Int = 2;
       |   fun three: Int = {
       |       one() + two()
-      |   }
-      |   fun isOne(v: Int): Bool = v == one()
+      |   };
+      |   fun isOne(v: Int): Bool = v == one();
       |}""".stripMargin ->
       List(ClassDef(
         name = TypeIdent("Main"),
@@ -63,7 +63,11 @@ class ParserTest extends UnitTestSpec {
       ))
   )
 
-  shouldPassSets foreach { case (input,expected) =>
-    Parser(new StringReader(input)) shouldEqual SyntaxTree.TopLevel(expected)
+  shouldPassSets foreach { case (input, expected) =>
+    val res = Parser(new StringReader(input))
+    res match {
+      case Success(res) => res shouldEqual SyntaxTree.TopLevel(expected)
+      case Failure(msg) => fail(msg)
+    }
   }
 }
