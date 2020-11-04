@@ -13,13 +13,13 @@ class ParserTest extends UnitTestSpec {
 
   implicit def str2OrdinaryIdent(str: String): SyntaxTree.OrdinaryIdent = OrdinaryIdent(str)
 
-  val TString: TypeIdent = "String"
-  val TInt: TypeIdent = "Int"
-  val TBool: TypeIdent = "Bool"
-  val VFalse: OrdinaryIdent = "false"
-  val VTrue: OrdinaryIdent = "true"
+  private val TString: TypeIdent = "String"
+  private val TInt: TypeIdent = "Int"
+  private val TBool: TypeIdent = "Bool"
+  private val VFalse: OrdinaryIdent = "false"
+  private val VTrue: OrdinaryIdent = "true"
 
-  val shouldPassSets = Map[String, List[ClassDef]](
+  private val shouldPassSets = Map[String, List[ClassDef]](
     """
       |class Main
       |""".stripMargin -> List(ClassDef("Main")),
@@ -31,9 +31,6 @@ class ParserTest extends UnitTestSpec {
       |
       |   fun one: Int = 1;
       |   fun two(): Int = 2;
-      |   fun three: Int = {
-      |       one() + two()
-      |   };
       |   fun isOne(v: Int): Bool = v == one();
       |}""".stripMargin ->
       List(ClassDef(
@@ -71,3 +68,7 @@ class ParserTest extends UnitTestSpec {
     }
   }
 }
+
+//fun three: Int = {
+//one() + two();
+//};

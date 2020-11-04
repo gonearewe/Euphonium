@@ -18,8 +18,8 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
     // parse `ClassDef` for constructing `TopLevel`
     val parseResult = classDef(LineStream(input)).toList map {
       case Success(value, _) => value
-      case Failure(reason, _) => reason match {
-        case x => return Fail(x.toString)
+      case Failure(reason, remaining) => reason match {
+        case x => return Fail(s"$x, remaining: ```${remaining.take(20)}``` ...")
         // fault handle
         //case ExpectedLiteral(expect, received) =>
         //case ExpectedRegex(regex) =>
@@ -50,7 +50,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
 
     // check if there's any class inheritance cycle
     val inheritanceMap = parseResult.flatMap {
-      case (classDef, None) => None
+      case (_, None) => None
       case (ClassDef(name, _, _, _, _), Some(parent)) => Some(name -> parent)
     }.toMap // inheritanceMap is a map from class(name) to its parent(name), class that has no superclass isn't included
     inheritanceMap.flatMap { case (start, _) =>
@@ -90,7 +90,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
     Ok(TopLevel(classes = completedNameClassMap.values.toList))
   }
 
-  private lazy val expr: Parser[Expr] = funCall | expr6
+  private lazy val expr: Parser[Expr] = expr6
 
   /**
    * Parse class definitions, output a pair of `ClassDef` and its parent's TypeIdent (if any),
@@ -154,6 +154,13 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
       | expr5
     )
 
+  // TODO: I think this is where bugs remain
+  private lazy val expr7: Parser[Expr] = (
+    expr7 ~ ("==" | "!=") ~ expr7 ^^ binary
+      | funCall
+      | expr6
+    )
+
   private lazy val funCall: Parser[FunCall] =
     (ordinaryIdent | funCall) ~ ("(" ~> opt(expr6 + ",") <~ ")") ^^ {
       (caller, args) =>
@@ -178,13 +185,13 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
     }
 
   private lazy val fieldDef: Parser[FieldDef] =
-    ("val" ~> ordinaryIdent) ~ (":" ~> typeIdent) ~ opt("=" ~> expr) ^^ {
+    ("val" ~> ordinaryIdent) ~ (":" ~> typeIdent) ~ opt("=" ~> expr) <~ ";" ^^ {
       (id, typ, init) => FieldDef(id, typ, init)
     }
 
   private lazy val methodDef: Parser[MethodDef] =
-    ("fun" ~> ordinaryIdent) ~ opt("(" ~> paramList <~ ")") ~ (":" ~> typeIdent) ~ ("=" ~> expr <~ ";") ^^ {
-      (name, params, retType, body) => MethodDef(name, params.getOrElse(List()), retType, body)
+    ("fun" ~> ordinaryIdent) ~ opt("(" ~> opt(paramList) <~ ")") ~ (":" ~> typeIdent) ~ ("=" ~> expr <~ ";") ^^ {
+      (name, params, retType, body) => MethodDef(name, params.flatten.getOrElse(Nil), retType, body)
     }
 
   private lazy val localVarDef: Parser[LocalVarDef] =
@@ -193,7 +200,7 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
     }
 
 
-  private lazy val intLit: Parser[IntLit] = """^\d+""".r ^^ { num => IntLit(num.toInt) }
+  private lazy val intLit: Parser[IntLit] = """\d+""".r ^^ { num => IntLit(num.toInt) }
 
   private lazy val boolLit: Parser[BoolLit] = (
     "true" ^^ { _ => BoolLit(true) }
@@ -204,6 +211,8 @@ object Parser extends RegexParsers with Phase[Reader, SyntaxTree.TopLevel, FailM
 
   private lazy val typeIdent: Parser[TypeIdent] = """^[A-Z]\w*""".r ^^ { c => TypeIdent(c) }
 
-  private lazy val ordinaryIdent: Parser[OrdinaryIdent] = """\w+""".r ^^ { c => OrdinaryIdent(c) }
+  private lazy val ordinaryIdent: Parser[OrdinaryIdent] =
+    """(?!false)(?!true)[a-z_]\w*""".r ^^ { c => OrdinaryIdent(c) }
+
 
 }
